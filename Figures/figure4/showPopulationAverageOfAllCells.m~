@@ -1,0 +1,52 @@
+% This is the population average of all landmark cells,
+% where the predictive cells are highlighted.
+
+% Get average tuning of all landmark cells
+amap_lcs = [];
+signal_type = "deconv_motor_on";
+session = [];
+indices = [];
+for s = 1:length(mData)
+    inds = [mData(s).rmaps.lcs.ind,mData(s).rmaps.tcs.ind];
+    session = [session, ones(1,length(inds))*s];
+    indices = [indices,inds];
+    if s == 1
+        amap_lcs = sb.generate.averagedTuningFromRasterMaps(cat(3,mData(s).rmaps.lcs.(signal_type),mData(s).rmaps.tcs.(signal_type)));    
+    else
+        amap_lcs = cat(1,amap_lcs,sb.generate.averagedTuningFromRasterMaps(cat(3,mData(s).rmaps.lcs.(signal_type),mData(s).rmaps.tcs.(signal_type))));
+    end
+    
+end
+
+[amap_lcs_sorted,sort_ind] = sb.sort.rasterMapByPeak(amap_lcs);
+[~,first_peaks] = max(amap_lcs_sorted');
+
+
+% Sort session and indices based on the sorted map
+session = session(sort_ind);
+indices = indices(sort_ind);
+
+first_peak_cells = first_peaks<30;
+first_peak_cells = find(first_peak_cells);
+
+% Find first cell where we are within the second landmark regime
+first_cell_second_landmark = find(first_peaks>50);
+first_cell_second_landmark = first_cell_second_landmark(1);
+
+[~,second_peaks] = max(amap_lcs_sorted(first_cell_second_landmark:end,:)');
+
+second_peak_cells = second_peaks<70;
+second_peak_cells = find(second_peak_cells)+first_cell_second_landmark;
+sb.plot.rasterMaps(amap_lcs_sorted([first_peak_cells,second_peak_cells],:))
+
+for c = 1:length(first_peak_cells)
+   close all;
+    sb.plot.rasterMaps(mData(session(c)).rmaps.dff_motor_on(:,:,indices(c)));
+    
+end
+
+for c = 1:length(second_peak_cells)
+   close all;
+    sb.plot.rasterMaps(mData(session(c)).rmaps.dff_motor_on(:,:,indices(c)));
+    
+end
